@@ -262,7 +262,7 @@
         order.macros = engine.balancedMacros(order.flavor, order.toppings);
       } catch (err) { console.warn("Balance failed:", err.message); }
       render();
-    }, { sub: "a sensible split", color: C.primary });
+    }, { sub: "a sensible split", color: C.accent });
 
     backButton(() => goTo(STATE.TOPPINGS));
     continueButton(checkMacros);
@@ -314,7 +314,7 @@
     button(sx, y, bw, bh, "Use closest", () => {
       order.macros = { ...plan.closest };
       goTo(STATE.SUMMARY);
-    }, { color: C.primary });
+    }, { color: C.accent });
     button(sx + bw + gap, y, bw, bh, "Change ingredients", () => goTo(STATE.FLAVOR),
            { sub: "flavors + toppings", color: C.accent });
     button(sx + 2 * (bw + gap), y, bw, bh, "Change macros", () => goTo(STATE.MACROS), { color: C.accent });
