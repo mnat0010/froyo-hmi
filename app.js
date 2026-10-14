@@ -77,8 +77,17 @@
       flavor: [],
       toppings: [],
       macros: Object.fromEntries(config.macros.map((m) => [m.name, m.default])),
-      plan: null   // from the engine: serving grams, closest macros, bill
+      plan: null,  // from the engine: serving grams, closest macros, bill
+      asked: null  // the macros the customer set, kept while "Use closest" is in effect
     };
+  }
+
+  // Throw away the agreed cup. If "Use closest" replaced the macros,
+  // put back the ones the customer actually asked for.
+  function discardCup() {
+    if (order.asked) order.macros = { ...order.asked };
+    order.asked = null;
+    order.plan = null;
   }
 
   function goTo(next) {
@@ -233,7 +242,7 @@
         render();
       }, { sub: rateText(tp), selected: picked });
     });
-    backButton(() => { order.toppings = []; goTo(STATE.FLAVOR); });
+    backButton(() => { order.toppings = []; discardCup(); goTo(STATE.FLAVOR); });
     continueButton(() => goTo(STATE.MACROS));
     orderSummaryStrip();
   }
@@ -262,9 +271,9 @@
         order.macros = engine.balancedMacros(order.flavor, order.toppings);
       } catch (err) { console.warn("Balance failed:", err.message); }
       render();
-    }, { sub: "a sensible split", color: C.accent });
+    }, { sub: "a sensible split", color: C.primary });
 
-    backButton(() => goTo(STATE.TOPPINGS));
+    backButton(() => { discardCup(); goTo(STATE.TOPPINGS); });
     continueButton(checkMacros);
     orderSummaryStrip();
   }
@@ -312,12 +321,13 @@
     const sx = (W - (3 * bw + 2 * gap)) / 2;
     const y = H - 110;
     button(sx, y, bw, bh, "Use closest", () => {
+      order.asked = { ...order.macros };
       order.macros = { ...plan.closest };
       goTo(STATE.SUMMARY);
-    }, { color: C.accent });
-    button(sx + bw + gap, y, bw, bh, "Change ingredients", () => goTo(STATE.FLAVOR),
+    }, { color: C.primary });
+    button(sx + bw + gap, y, bw, bh, "Change ingredients", () => { discardCup(); goTo(STATE.FLAVOR); },
            { sub: "flavors + toppings", color: C.accent });
-    button(sx + 2 * (bw + gap), y, bw, bh, "Change macros", () => goTo(STATE.MACROS), { color: C.accent });
+    button(sx + 2 * (bw + gap), y, bw, bh, "Change macros", () => { discardCup(); goTo(STATE.MACROS); }, { color: C.accent });
   }
 
   function drawSummary() {
@@ -381,7 +391,7 @@
       text(`${fmt(plan.closest[m.name])}${m.unit || ""}`, "btnfont", mc.x + mc.w - 16, my, "midright");
     });
 
-    backButton(() => goTo(STATE.MACROS));
+    backButton(() => { discardCup(); goTo(STATE.MACROS); });
     continueButton(() => goTo(STATE.PAYMENT), "Pay");
     orderSummaryStrip();
   }
