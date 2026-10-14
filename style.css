@@ -1,0 +1,191 @@
+/* ---------------------------------------------------------------------------
+   FroYo web HMI styles.
+   Colours and font sizes come from config.js (set as CSS variables by app.js),
+   so most visual changes belong there rather than here.
+   --------------------------------------------------------------------------- */
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #2b2427;               /* the "wall" around the kiosk screen */
+  font-family: var(--font, Arial, Helvetica, sans-serif);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+/* ----------------------------------------------------------------- stage */
+
+#stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 800px;
+  height: 480px;
+  transform: translate(-50%, -50%) scale(var(--scale, 1));
+  transform-origin: center;
+  background: var(--background);
+  color: var(--text);
+  overflow: hidden;
+  border-radius: 6px;
+  box-shadow: 0 0 0 10px #151113, 0 20px 60px rgba(0, 0, 0, 0.55);
+  cursor: pointer;
+}
+
+body.fullscreen #stage { box-shadow: none; border-radius: 0; }
+
+/* ----------------------------------------------------------------- text */
+
+.t {
+  position: absolute;
+  white-space: nowrap;
+  line-height: 1.15;
+}
+.t.center { transform: translate(-50%, -50%); text-align: center; }
+.t.midleft { transform: translateY(-50%); }
+.t.midright { transform: translate(-100%, -50%); text-align: right; }
+
+.title { font-size: var(--fs-title); font-weight: bold; color: var(--primary_dark); }
+.h2 { font-size: var(--fs-h2); font-weight: bold; }
+.body { font-size: var(--fs-body); }
+.small { font-size: var(--fs-small); }
+.btnfont { font-size: var(--fs-btn); font-weight: bold; }
+.muted { color: var(--text_muted); }
+
+/* ----------------------------------------------------------------- buttons */
+
+.btn {
+  position: absolute;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  text-align: center;
+  transition: transform 0.12s ease;
+}
+.btn:active, .btn.pressed { transform: scale(0.98); }
+.btn.selected { background: var(--primary); border: 3px solid var(--primary_dark); }
+.btn.disabled { background: rgb(210, 205, 215); }
+.btn .label { font-size: var(--fs-btn); font-weight: bold; line-height: 1.1; }
+.btn .sub { font-size: var(--fs-btn-sub); }
+
+/* flavor buttons: colour dot on the left, text beside it */
+.btn.swatch { flex-direction: row; justify-content: flex-start; padding-left: 16px; gap: 12px; }
+.btn.swatch .dot {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 1px solid var(--primary_dark); flex: none;
+}
+.btn.swatch .words { display: flex; flex-direction: column; align-items: flex-start; }
+
+.arrow { position: absolute; }
+.arrow svg { display: block; }
+.arrow:active { transform: scale(0.94); }
+
+/* ----------------------------------------------------------------- cards */
+
+.card {
+  position: absolute;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.valuebox {
+  position: absolute;
+  background: var(--card);
+  border: 3px solid var(--text);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-btn);
+  font-weight: bold;
+}
+
+.bar {
+  position: absolute;
+  height: 14px;
+  border-radius: 7px;
+  border: 1px solid var(--primary_dark);
+}
+
+.rule { position: absolute; height: 1px; background: var(--border); }
+
+.strip {
+  position: absolute;
+  left: 180px;
+  width: 360px;
+  top: 418px;
+  transform: translateY(-50%);
+  text-align: center;
+  font-size: var(--fs-small);
+  color: var(--text_muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ----------------------------------------------------------------- idle */
+
+.pulse {
+  position: absolute;
+  left: 400px;
+  top: 370px;
+  width: 260px;
+  height: 260px;
+  margin: -130px 0 0 -130px;
+  border-radius: 50%;
+  background: var(--idle_circle);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+/* ----------------------------------------------------------------- progress */
+
+.progress {
+  position: absolute;
+  left: 250px; top: 360px; width: 300px; height: 24px;
+  border-radius: 12px;
+  background: rgb(230, 225, 225);
+  overflow: hidden;
+}
+.progress .fill { height: 100%; background: var(--primary); border-radius: 12px; }
+.progress .pct {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: var(--fs-small);
+}
+
+/* ----------------------------------------------------------------- page hint */
+
+#hint {
+  position: fixed;
+  left: 0; right: 0; bottom: 10px;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  color: #b9a9b0;
+  font-size: 13px;
+}
+#hint button {
+  font: inherit;
+  color: #e9dde2;
+  background: #3d3236;
+  border: 1px solid #5a4a50;
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+#hint button:hover { background: #4a3d42; }
+body.fullscreen #hint { display: none; }
