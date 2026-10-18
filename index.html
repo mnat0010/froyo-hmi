@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FroYo Macro - HMI Demo</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- The 800 x 480 kiosk screen. app.js draws every state into it and
+       scales it to fit whatever display the demo is on. -->
+  <main id="stage" aria-label="FroYo vending machine screen"></main>
+
+  <footer id="hint">
+    <span>Click or tap the screen to use it</span>
+    <button id="fullscreen" type="button">Fullscreen (F)</button>
+    <button id="restart" type="button">Restart (R)</button>
+  </footer>
+
+  <noscript>This demo needs JavaScript turned on.</noscript>
+
+  <script src="config.js"></script>
+  <script src="engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
