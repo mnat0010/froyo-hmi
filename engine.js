@@ -206,6 +206,7 @@
   let LIB = {};
   let MIN_TOTAL_FROYO, MIN_FLAVOR, MIN_TOPPING, SPLIT_TOL, CUP_FEE, BALANCE_CALORIES;
   let MACRO_SETTINGS = {};
+  let STATIONS, VARIATION_PCT, VARIATION_MIN_G;
 
   function load(config) {
     LIB = {};
@@ -233,6 +234,11 @@
     BALANCE_CALORIES = (config.balance || {}).calories ?? 300;
     MACRO_SETTINGS = {};
     (config.macros || []).forEach((m) => { MACRO_SETTINGS[m.name] = m; });
+
+    const d = config.dispensing || {};
+    STATIONS = Math.max(1, Math.round(d.stations ?? 4));
+    VARIATION_PCT = d.mass_variation_percent ?? 3;
+    VARIATION_MIN_G = d.mass_variation_min_grams ?? 0.5;
   }
 
   // =========================================================================
@@ -598,6 +604,47 @@
     return macros;
   }
 
-  global.FroyoEngine = { load, planOrder, balancedMacros, linprog, TOLERANCE };
+  // =========================================================================
+  // DISPENSE SIMULATION
+  //
+  // A real dispenser never hits the target exactly. Each ingredient lands
+  // at its target plus a random error on a bell curve, with the standard
+  // deviation set to half the limit and anything past the limit clipped.
+  // The limit is mass_variation_percent of the target, or
+  // mass_variation_min_grams for small doses, whichever is bigger.
+  // =========================================================================
+
+  function gaussian() {
+    let u = 0, v = 0;
+    while (!u) u = Math.random();
+    while (!v) v = Math.random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+
+  function macrosOfServing(serving) {
+    const p = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+    Object.entries(serving).forEach(([name, grams]) => {
+      KEYS.forEach((k) => { p[k] += (LIB[name][k] / 100) * grams; });
+    });
+    return toHmi(p);
+  }
+
+  // targets: { name: grams } -> { actual: { name: grams }, macros }
+  function simulateDispense(targets) {
+    const actual = {};
+    Object.entries(targets).forEach(([name, target]) => {
+      const limit = Math.max(target * VARIATION_PCT / 100, VARIATION_MIN_G);
+      const error = Math.max(-limit, Math.min(limit, gaussian() * limit / 2));
+      actual[name] = round1(Math.max(0, target + error));
+    });
+    return { actual, macros: macrosOfServing(actual) };
+  }
+
+  const pickStation = () => 1 + Math.floor(Math.random() * STATIONS);
+
+  global.FroyoEngine = {
+    load, planOrder, balancedMacros, linprog, TOLERANCE,
+    simulateDispense, macrosOfServing, pickStation
+  };
 
 })(typeof window !== "undefined" ? window : globalThis);

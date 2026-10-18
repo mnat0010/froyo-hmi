@@ -78,7 +78,8 @@
       toppings: [],
       macros: Object.fromEntries(config.macros.map((m) => [m.name, m.default])),
       plan: null,  // from the engine: serving grams, closest macros, bill
-      asked: null  // the macros the customer set, kept while "Use closest" is in effect
+      asked: null,     // the macros the customer set, kept while "Use closest" is in effect
+      dispensed: null  // after payment: { station, target, actual, macros }
     };
   }
 
@@ -410,7 +411,11 @@
 
     button(W / 2 - 150, 300, 300, 70, "Simulate Tap to Pay", () => {
       paymentStatus = "Payment approved!";
-      console.log("Dispensing (g):", order.plan && order.plan.serving);
+      const target = Object.fromEntries(
+        Object.entries(order.plan.bill.lines).map(([name, line]) => [name, line.grams]));
+      const result = engine.simulateDispense(target);
+      order.dispensed = { station: engine.pickStation(), target, ...result };
+      console.log("Station", order.dispensed.station, "target (g):", target, "actual (g):", result.actual);
       goTo(STATE.DISPENSING);
     }, { color: C.primary });
     backButton(() => goTo(STATE.SUMMARY));
@@ -452,7 +457,31 @@
     const fill = el("div", "fill", { width: "0px" });
     const pct = el("div", "pct", null, "0%");
     bar.appendChild(fill); bar.appendChild(pct);
-    text("Dispensing...", "body muted", W / 2, 400);
+    const station = order.dispensed ? order.dispensed.station : 1;
+    text(`Dispensing at Station ${station}...`, "body muted", W / 2, 400);
+
+    // station badge on the left
+    rect("card", 60, 160, 200, 160);
+    text("Collect from", "small muted", 160, 182);
+    text("Station", "body", 160, 210);
+    text(String(station), "huge", 160, 272);
+
+    // live scale readout on the right: dispensed / target
+    const disp = order.dispensed;
+    const readouts = [];
+    if (disp) {
+      const names = Object.keys(disp.target);
+      // rows shrink to 18 px and the card grows so up to 8 ingredients fit above the progress bar
+      const rowH = Math.max(18, Math.min(24, 125 / Math.max(1, names.length)));
+      rect("card", 540, 160, 220, Math.max(160, 46 + names.length * rowH));
+      text("Scale", "small muted", 556, 178, "midleft");
+      text("g", "small muted", 744, 178, "midright");
+      names.forEach((name, i) => {
+        const cy = 198 + i * rowH + rowH / 2;
+        text(name, "small", 556, cy, "midleft");
+        readouts.push({ name, node: text("", "small", 744, cy, "midright") });
+      });
+    }
 
     const lerpX = (y, p1, p2) => p1[0] + ((y - p1[1]) / (p2[1] - p1[1])) * (p2[0] - p1[0]);
     const cupH = bl[1] - tl[1];
@@ -477,6 +506,10 @@
       });
       fill.style.width = px(300 * progress);
       pct.textContent = `${Math.floor(progress * 100)}%`;
+      readouts.forEach((r) => {
+        const now = disp.actual[r.name] * progress;
+        r.node.textContent = `${now.toFixed(1)} / ${disp.target[r.name]}`;
+      });
 
       if (progress >= 1 && performance.now() - stateEnter >= duration + pause) {
         goTo(STATE.DONE);
@@ -488,17 +521,58 @@
   }
 
   function drawDone() {
-    text(config.text.done.subtitle || "Enjoy your froyo!", "title", W / 2, 90);
-    const macroBits = config.macros.map((m) => `${m.name}: ${fmt(order.macros[m.name])}${m.unit || ""}`);
+    text(config.text.done.subtitle || "Enjoy your froyo!", "title", W / 2, 45);
+    const disp = order.dispensed;
     const plan = order.plan;
-    const lines = [
-      `Flavor: ${order.flavor.join(", ") || "-"}`,
-      `Toppings: ${order.toppings.join(", ") || "None"}`,
-      `Macros: ${macroBits.join(", ")}`,
-      `Cup: ${plan ? Object.entries(plan.bill.lines).map(([n, l]) => `${l.grams} g ${n}`).join(", ") : "-"}`,
-      `Total paid: ${money(plan ? plan.bill.total : 0)}`
-    ];
-    lines.forEach((line, i) => text(line, "body muted", W / 2, 160 + i * 34));
+    if (!disp || !plan) return;
+    const muted = C.text_muted;
+
+    // ---- where to collect it
+    rect("card", 30, 85, 210, 265);
+    text("Collect from", "body muted", 135, 120);
+    text("Station", "h2", 135, 160);
+    text(String(disp.station), "huge", 135, 240);
+    text(`of ${(config.dispensing || {}).stations || 4}`, "small muted", 135, 310);
+
+    // ---- what the machine actually put in
+    const card = { x: 255, y: 85, w: 515, h: 265 };
+    rect("card", card.x, card.y, card.w, card.h);
+    const col = { name: card.x + 16, target: card.x + 285, actual: card.x + 395, diff: card.x + card.w - 16 };
+    const headY = card.y + 20;
+    text("Ingredient", "small muted", col.name, headY, "midleft");
+    text("Target", "small muted", col.target, headY, "midright");
+    text("Dispensed", "small muted", col.actual, headY, "midright");
+    text("Diff", "small muted", col.diff, headY, "midright");
+
+    const names = Object.keys(disp.target);
+    const rowH = Math.min(28, Math.floor((card.h - 95) / Math.max(1, names.length)));
+    const rowCls = rowH >= 24 ? "body" : "small";
+    const signed = (v) => `${v >= 0 ? "+" : ""}${v.toFixed(1)} g`;
+
+    names.forEach((name, i) => {
+      const cy = card.y + 40 + i * rowH + rowH / 2;
+      const diff = disp.actual[name] - disp.target[name];
+      text(name, rowCls, col.name, cy, "midleft");
+      text(`${disp.target[name]} g`, rowCls, col.target, cy, "midright");
+      text(`${disp.actual[name].toFixed(1)} g`, rowCls, col.actual, cy, "midright");
+      text(signed(diff), "small", col.diff, cy, "midright", muted);
+    });
+
+    const totalTarget = names.reduce((s, n) => s + disp.target[n], 0);
+    const totalActual = names.reduce((s, n) => s + disp.actual[n], 0);
+    const lineY = card.y + card.h - 50;
+    rect("rule", card.x + 12, lineY, card.w - 24, 1);
+    const totalY = card.y + card.h - 24;
+    text("Total", "h2", col.name, totalY, "midleft", C.primary_dark);
+    text(`${totalTarget} g`, "body", col.target, totalY, "midright");
+    text(`${totalActual.toFixed(1)} g`, "body", col.actual, totalY, "midright");
+    const pctOff = totalTarget ? (100 * (totalActual - totalTarget)) / totalTarget : 0;
+    text(`${pctOff >= 0 ? "+" : ""}${pctOff.toFixed(1)}%`, "small", col.diff, totalY, "midright", muted);
+
+    // ---- macros you actually got, and what was paid
+    const macroBits = config.macros.map((m) => `${m.name} ${fmt(disp.macros[m.name])}${m.unit || ""}`);
+    text(`Actual macros: ${macroBits.join(", ")}`, "body muted", W / 2, 378);
+    text(`Total paid: ${money(plan.bill.total)}`, "body muted", W / 2, 408);
 
     const countdown = text("", "small muted", W / 2, H - 30);
     const tick = () => {

@@ -53,6 +53,7 @@ body.fullscreen #stage { box-shadow: none; border-radius: 0; }
 .small { font-size: var(--fs-small); }
 .btnfont { font-size: var(--fs-btn); font-weight: bold; }
 .muted { color: var(--text_muted); }
+.huge { font-size: 96px; font-weight: bold; line-height: 1; color: var(--primary_dark); }
 
 /* ----------------------------------------------------------------- buttons */
 

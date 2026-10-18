@@ -120,11 +120,18 @@ window.FROYO_CONFIG = {
     { name: "Calories", unit: "kcal", default: 200, min: 0, max: 600, step: 10 }
   ],
 
+  // Simulated machine behaviour after payment
+  dispensing: {
+    stations: 4,                   // a random collection station 1 to N is picked
+    mass_variation_percent: 3,     // each ingredient lands within this % of its target...
+    mass_variation_min_grams: 0.5  // ...or this many grams, whichever is bigger
+  },
+
   timing: {
     idle_timeout_seconds: 45,
     dispense_duration_seconds: 5,
     sleep_after_done_seconds: 2,
-    return_home_seconds: 8
+    return_home_seconds: 15
   },
 
   pricing: {
